@@ -6,6 +6,7 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\LogoutController;
 use App\Http\Controllers\Auth\MeController;
 use App\Http\Controllers\Auth\VerifyEmailController;
+use App\Http\Controllers\ClientAddressController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\SolicitationController;
 use App\Http\Controllers\Subscription\SubscriptionController;
@@ -36,6 +37,9 @@ Route::get('tasks', [TaskController::class, 'index']);
 Route::post('create-task', [TaskController::class, 'store']);
 Route::put('update-task/{id}', [TaskController::class, 'updateCompleted']);
 
+Route::put('client-update/{id}', [ClientController::class, 'update']);
+
+Route::put('client-address-update/{id}', [ClientAddressController::class, 'update']);
 
 Route::get('clients', [ClientController::class, 'index']);
 Route::get('clients/statistics', [ClientController::class, 'statistics']);

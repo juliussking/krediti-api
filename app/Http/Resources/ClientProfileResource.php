@@ -19,6 +19,9 @@ class ClientProfileResource extends JsonResource
 
             'id' => $this->id,
             'name' => $this->name,
+            'avatar' => $this->profile?->avatar,
+            'gender' => $this->profile?->gender,
+            'marital_status' => $this->profile?->marital_status,
             'email' => $this->email,
             'person_type' => $this->person_type,
             'status' => $this->status,
@@ -45,6 +48,7 @@ class ClientProfileResource extends JsonResource
             'register_date' => $this->created_at,
             'solicitations' => SolicitationResource::collection($this->solicitations),
             'payments' => PaymentResource::collection($this->payments),
+            
 
         ];
     }

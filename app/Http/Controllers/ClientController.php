@@ -108,6 +108,17 @@ class ClientController extends Controller
         return new RegisterClientResource($client);
     }
 
+    public function update($id, Request $request)
+    {
+        $client = Client::findOrFail($id);
+
+        $client->update($request->all());
+
+        $client->profile->update($request->all());
+
+        return $client;
+    }
+
     public function destroy($id)
     {
         $client = Client::findOrFail($id);
