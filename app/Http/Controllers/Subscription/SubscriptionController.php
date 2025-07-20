@@ -3,31 +3,42 @@
 namespace App\Http\Controllers\Subscription;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Auth\SubscriptionRequest;
+use App\Models\Plan;
 use Illuminate\Http\Request;
 
 class SubscriptionController extends Controller
 {
-    public function __invoke()
+    public function __invoke(SubscriptionRequest $request)
     {
+        $input = $request->validated();
+
+        $user = Auth()->user();
         $company = Auth()->user()->company;
+        $company->createOrGetStripeCustomer([
+            'name' => $user->name,
+            'email' => $user->email
+        ]);
+        $plan = Plan::findOrFail($input['plan_id']);
+        
+        $stripePriceId = $plan->stripe_price_monthly_id;
 
-    $monthly = $company->newSubscription('default', 'price_1RguiRPmixXaMy1rbZ6zzEmL')
+        if($input['frequency'] == 'yearly') {
+            $stripePriceId = $plan->stripe_price_yearly_id;
+        }
+
+    $subscription = $company->newSubscription($plan->name, $stripePriceId)
     ->checkout([
-        'success_url' => 'https://example.com/success',
-        'cancel_url' => 'https://example.com/cancel',
+        'success_url' => config('app.portal_url') . '/sucesso-assinatura',
+        'cancel_url' => config('app.portal_url') . '/cancelar-assinatura',
     ]);
 
-    $yearly = $company->newSubscription('default', 'price_1RgsZXPmixXaMy1rF27agI6T')
-    ->checkout([
-        'success_url' => 'https://example.com/success',
-        'cancel_url' => 'https://example.com/cancel',
-    ]);
+    
 
 
 
     return [
-        'monthly_url' => $monthly->url,
-        'yearly_url' => $yearly->url,
+        'subscription_url' => $subscription->url,
     ];
     }
 }

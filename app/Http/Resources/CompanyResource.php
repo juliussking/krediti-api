@@ -5,7 +5,7 @@ namespace App\Http\Resources;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-class UserResource extends JsonResource
+class CompanyResource extends JsonResource
 {
     /**
      * Transform the resource into an array.
@@ -16,13 +16,15 @@ class UserResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'name' => $this->name,
+            'social_reason' => $this->social_reason,
+            'fantasy_name' => $this->fantasy_name,
+            'cnpj' => $this->cnpj,
+            'phone' => $this->phone,
             'email' => $this->email,
-            'profile' => UserProfileResource::make($this->whenLoaded('profile')),
-            'company_status' => $this->company?->subscription('Krediti')?->asStripeSubscription()?->status,
-            'hasSubscription' => !!$this->company?->subscribed('Krediti')
-
+            'status' => $this->status,
+            'admin' => $this->admin->name,
             
+
         ];
     }
 }

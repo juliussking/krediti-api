@@ -9,7 +9,7 @@ class UserController extends Controller
 {
     public function show()
     {
-        $users = User::all();
+        $users = User::where('company_id', auth()->user()->company_id)->get();
 
         return $users;
     }

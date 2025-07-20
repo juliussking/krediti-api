@@ -13,9 +13,15 @@ class SolicitationController extends Controller
 {
     public function index()
     {
-        $solicitations = Solicitation::all();
+        $solicitations = Solicitation::where('company_id', auth()->user()->company_id)->get();
 
-        return new SolicitationResource($solicitations); 
+        return [
+            'solicitations' => SolicitationResource::collection($solicitations),
+            'solicitations_count' => $solicitations->count(),
+            'solicitations_approved' => $solicitations->where('status', 'Aprovada')->count(),
+            'solicitations_pending' => $solicitations->where('status', 'Pendente')->count(),
+            'solicitations_reproved' => $solicitations->where('status', 'Recusada')->count(),
+    ]; 
     }
 
     public function store($id, SolicitationRequest $request)
@@ -28,6 +34,7 @@ class SolicitationController extends Controller
             'tax' => $input['tax'],
             'amount_requested' => $input['amount_requested'],
             'total' => $request->amount_requested * $request->tax,
+            'company_id' => Auth()->user()->company_id
         ]);
 
         $solicitation->save();
@@ -65,6 +72,7 @@ class SolicitationController extends Controller
             'amount' => $solicitation->amount_approved,
             'status' => 'Ativo',
             'expiration_date' => now()->addDays(30),
+            'company_id' => Auth()->user()->company_id
         ]);
 
         return response()->json([

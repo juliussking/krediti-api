@@ -70,7 +70,7 @@ class CompanyRegisterController extends Controller
         
         $company->save();
         $user->save();
-        
+
         UserRegistered::dispatch($user);
         
         return response()->json([

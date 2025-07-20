@@ -31,14 +31,14 @@ class RegisterClientRequest extends FormRequest
             'street' => ['required','string', 'max:255'], //*
             'city' => ['string', 'max:255'],
             'neighbor' => ['string', 'max:255'],
-            'client_number' => ['string', 'max:255'],
+            'client_number' => ['integer', 'max:255'],
             'reference_point' => ['required','string', 'max:255'], //*
             'birth_date' => ['required','date', 'max:255'], //*
             'gender' => ['string', 'max:255'],
 
             'person_type' => ['string', 'max:255'],
             'cpf' => ['required','string', 'max:255'], //*
-            'cnpj' => ['string', 'max:255'],
+            'cnpj' => ['max:255'],
 
             'office_name' => ['string', 'max:255'],
             'office_zipcode' => ['string', 'max:255'],
@@ -46,15 +46,15 @@ class RegisterClientRequest extends FormRequest
             'office_neighbor' => ['string', 'max:255'],
             'office_phone' => ['string', 'max:255'],
             'office_city' => ['string', 'max:255'],
-            'office_number' => ['string', 'max:255'],
-            'office_cnpj' => ['string', 'max:255'],
+            'office_number' => ['integer', 'max:255'],
+            'office_cnpj' => ['max:255'],
             'office_role' => ['required','string', 'max:255'], //*
-            'office_salary' => ['required','string', 'max:255'], //*
+            'office_salary' => ['required', 'max:255'], //*
             'office_payment_date' => ['required','date', 'max:255'], //*
             'office_admission_date' => ['date', 'max:255'],
 
             'amount_requested' => ['required','string', 'max:255'], //*
-            'tax' => ['required','string', 'max:255'], //*
+            'tax' => ['required', 'max:255'], //*
 
             'reference_contacts' => ['required','array', 'max:255'], //*
             'reference_contacts.*.name' => ['required','string', 'max:255'], //*
@@ -62,6 +62,7 @@ class RegisterClientRequest extends FormRequest
             'reference_contacts.*.relation' => ['required','string', 'max:255'], //*
 
             'observations' => ['required','string'], //*
+
         ];
     }
 }

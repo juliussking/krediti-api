@@ -5,7 +5,7 @@ namespace App\Http\Resources;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-class UserResource extends JsonResource
+class PlanResource extends JsonResource
 {
     /**
      * Transform the resource into an array.
@@ -17,12 +17,9 @@ class UserResource extends JsonResource
         return [
             'id' => $this->id,
             'name' => $this->name,
-            'email' => $this->email,
-            'profile' => UserProfileResource::make($this->whenLoaded('profile')),
-            'company_status' => $this->company?->subscription('Krediti')?->asStripeSubscription()?->status,
-            'hasSubscription' => !!$this->company?->subscribed('Krediti')
-
-            
+            'description' => $this->description,
+            'price_monthly' => $this->price_monthly,
+            'price_yearly' => $this->price_yearly
         ];
     }
 }

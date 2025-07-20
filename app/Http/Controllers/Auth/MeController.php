@@ -10,6 +10,7 @@ class MeController extends Controller
 {
     public function show()
     {
+
         return new UserResource(auth()->user());
     }
 }

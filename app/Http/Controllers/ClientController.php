@@ -6,6 +6,7 @@ use App\Exceptions\ClientNotFoundException;
 use App\Http\Requests\RegisterClientRequest;
 use App\Http\Resources\ClientProfileResource;
 use App\Http\Resources\ClientResource;
+use App\Http\Resources\ReferenceContactResource;
 use App\Http\Resources\RegisterClientResource;
 use App\Models\Client;
 use Illuminate\Http\Request;
@@ -15,21 +16,24 @@ class ClientController extends Controller
     public function index()
     {
         $clients = Client::with('profile')
+            ->where('company_id', Auth()->user()->company_id)
             ->get();
 
         return [
+
             'clients' => ClientResource::collection($clients),
         ];
     }
 
     public function statistics()
     {
+        $client = Client::where('company_id', Auth()->user()->company_id)->get();
         return [
-            
-            'clients_count' => Client::count(),
-            'clients_active' => Client::where('status', 'Ativo')->count(),
-            'clients_due' => Client::where('status', 'Vencido')->count(),
-            'clients_paid_off' => Client::where('status', 'Quitado')->count(),
+
+            'clients_count' => $client->count(),
+            'clients_active' => $client->where('status', 'Ativo')->count(),
+            'clients_due' => $client->where('status', 'Vencido')->count(),
+            'clients_paid_off' => $client->where('status', 'Quitado')->count(),
         ];
     }
     public function show($id)
@@ -39,13 +43,17 @@ class ClientController extends Controller
             ->withSum('payments', 'amount')
             ->find($id);
 
-            if(!$clients) {
+        if (!$clients) {
 
             throw new ClientNotFoundException();
+        }
 
-            }
+        $referenceContacts = $clients->referenceContacts()->paginate(10);
 
-        return new ClientProfileResource($clients);
+        return [
+            'client' => new ClientProfileResource($clients),
+            'referenceContacts' => ReferenceContactResource::collection($referenceContacts),
+        ];
     }
 
     public function store(RegisterClientRequest $request)
@@ -56,7 +64,8 @@ class ClientController extends Controller
             'name' => $input['name'],
             'email' => $input['email'],
             'person_type' => $input['person_type'],
-            'status' => 'Novo'
+            'status' => 'Novo',
+            'company_id' => Auth()->user()->company_id
         ]);
 
         $client->profile()->create([
@@ -95,6 +104,8 @@ class ClientController extends Controller
             'user_id' => auth()->user()->id,
             'amount_requested' => $input['amount_requested'],
             'tax' => $input['tax'],
+            'total' => $input['amount_requested'] * $input['tax'],
+            'company_id' => Auth()->user()->company_id
         ]);
 
         foreach ($input['reference_contacts'] as $referenceContact) {
@@ -124,6 +135,5 @@ class ClientController extends Controller
         $client = Client::findOrFail($id);
 
         $client->delete();
-
     }
 }
