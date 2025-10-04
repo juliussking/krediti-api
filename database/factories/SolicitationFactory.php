@@ -2,6 +2,9 @@
 
 namespace Database\Factories;
 
+use App\Models\Client;
+use App\Models\Company;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -17,13 +20,14 @@ class SolicitationFactory extends Factory
     public function definition(): array
     {
         return [
-            'client_id' => fake()->numberBetween(1, 10),
-            'user_id' => fake()->numberBetween(1, 10),
+            'client_id' => Client::inRandomOrder()->first()->id,
+            'user_id' => User::inRandomOrder()->first()->id,
             'amount_requested' => fake()->randomFloat(2, 1000, 100000),
             'tax' => fake()->randomElement(['1.31', '1.27', '1.23', '1.19', '1.15']),
             'status' => fake()->randomElement(['Pendente', 'Aprovada', 'Recusada']),
             'total' => fake()->randomFloat(2, 1000, 100000),
-            'company_id' => fake()->numberBetween(1, 10),
+            'company_id' => Company::inRandomOrder()->first()->id,
+
 
         ];
     }

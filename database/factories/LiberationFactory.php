@@ -2,6 +2,9 @@
 
 namespace Database\Factories;
 
+use App\Models\Client;
+use App\Models\Company;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -17,12 +20,12 @@ class LiberationFactory extends Factory
     public function definition(): array
     {
         return [
-            'user_id' => fake()->numberBetween(1, 10),
-            'client_id' => fake()->numberBetween(1, 10),
+            'user_id' => User::inRandomOrder()->first()->id,
+            'client_id' => Client::inRandomOrder()->first()->id,
             'amount' => fake()->randomFloat(2, 1000, 100000),
             'status' => fake()->randomElement(['À vencer', 'Aprovado', 'Vencido', 'Quitado']),
             'expiration_date' => fake()->date(),
-            'company_id' => fake()->numberBetween(1, 10),
+            'company_id' => Company::inRandomOrder()->first()->id,
         ];
     }
 }

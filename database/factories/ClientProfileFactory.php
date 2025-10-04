@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Models\Client;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -17,7 +18,7 @@ class ClientProfileFactory extends Factory
     public function definition(): array
     {
         return [
-            'client_id' => fake()->numberBetween(1, 10),
+            'client_id' => Client::inRandomOrder()->first()->id,
             'avatar' => 'https://randomuser.me/api/portraits/' . $this->faker->randomElement(['men', 'women']) . '/' . $this->faker->numberBetween(1, 40) . '.jpg',
             'birth_date' => fake()->date(),
             'gender' => fake()->randomElement(['Masculino', 'Feminino']),

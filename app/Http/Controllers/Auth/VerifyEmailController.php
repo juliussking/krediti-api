@@ -7,7 +7,6 @@ use App\Exceptions\InvalidVerifyEmailTokenException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\VerifyEmailRequest;
 use App\Models\User;
-use Illuminate\Http\Request;
 
 class VerifyEmailController extends Controller
 {

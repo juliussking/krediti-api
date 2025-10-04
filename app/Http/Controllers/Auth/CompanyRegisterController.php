@@ -9,11 +9,9 @@ use App\Exceptions\CompanyEmailAlreadyExistsException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CompanyRegisterRequest;
 use App\Models\Company;
+use App\Models\Plan;
 use App\Models\User;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
-use Illuminate\Validation\Rules\Email;
 
 class CompanyRegisterController extends Controller
 {
@@ -24,14 +22,14 @@ class CompanyRegisterController extends Controller
         $admin_email = User::whereEmail($input['admin_email'])->exists();
 
         if ($admin_email) {
-            
+
             throw new AdminEmailAlreadyExistsException();
         }
 
         $company_email = Company::whereEmail($input['company_email'])->exists();
 
         if ($company_email) {
-            
+
             throw new CompanyEmailAlreadyExistsException();
         }
 
@@ -39,7 +37,7 @@ class CompanyRegisterController extends Controller
         $companies = Company::whereCnpj($input['cnpj'])->exists();
 
         if ($companies) {
-            
+
             throw new CnpjAlreadyExistsException();
         }
 
@@ -59,23 +57,39 @@ class CompanyRegisterController extends Controller
             'company_id' => $company->id,
             'token' => Str::uuid(),
         ]);
-        
-        $user->profile()->create([ 
+
+        $user->profile()->create([
             'phone' => $input['admin_phone'],
             'birthday' => $input['admin_birthday'],
         ]);
 
         $company->admin_id = $user->id;
 
-        
+        $company->createOrGetStripeCustomer([
+            'name'  => $user->name,
+            'email' => $user->email
+        ]);
+
+        $plan = Plan::findOrFail(1);
+
+         $stripePriceId = 'monthly'
+        ? $plan->stripe_price_yearly_id
+        : $plan->stripe_price_monthly_id;
+
+        $subscription = $company->newSubscription($plan->name, $stripePriceId)
+        ->trialDays(30)
+        ->create();
+
+
         $company->save();
         $user->save();
 
+
         UserRegistered::dispatch($user);
-        
+
         return response()->json([
             'message' => 'Empresa cadastrada com sucesso',
+            'subscription' => $subscription
         ]);
-
     }
 }

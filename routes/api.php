@@ -15,10 +15,7 @@ use App\Http\Controllers\Subscription\SubscriptionController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\UserController;
 use App\Http\Middleware\EnsureCompanyHasActivePlan;
-use Illuminate\Auth\Middleware\EnsureEmailIsVerified;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
-use Laravel\Cashier\Subscription;
 
 Route::middleware('web')->group(function () {
 
@@ -28,11 +25,7 @@ Route::middleware('web')->group(function () {
 
     Route::post('subscription', SubscriptionController::class);
 
-    // Route::get('plans', PlanController::class)->middleware(EnsureCompanyHasActivePlan::class);
-
-
     Route::post('verify-email', VerifyEmailController::class);
-
 
     Route::middleware(['auth:sanctum'])->group(function () {
 
@@ -43,6 +36,7 @@ Route::middleware('web')->group(function () {
         Route::middleware(EnsureCompanyHasActivePlan::class)->group(function () {
 
             Route::get('users', [UserController::class, 'show']);
+            Route::post('user-register', [UserController::class, 'store']);
 
             Route::get('tasks', [TaskController::class, 'index']);
             Route::post('create-task', [TaskController::class, 'store']);
@@ -53,8 +47,11 @@ Route::middleware('web')->group(function () {
             Route::put('client-address-update/{id}', [ClientAddressController::class, 'update']);
 
             Route::get('info-company', [CompanyController::class, 'show']);
+            
 
             Route::get('clients', [ClientController::class, 'index']);
+
+
             Route::get('clients/statistics', [ClientController::class, 'statistics']);
             Route::get('client-profile/{id}', [ClientController::class, 'show']);
             Route::post('client-register', [ClientController::class, 'store']);

@@ -19,26 +19,25 @@ class SubscriptionController extends Controller
             'name' => $user->name,
             'email' => $user->email
         ]);
+
         $plan = Plan::findOrFail($input['plan_id']);
-        
+
         $stripePriceId = $plan->stripe_price_monthly_id;
-
-        if($input['frequency'] == 'yearly') {
+        
+        if ($input['frequency'] == 'yearly') {
+            
             $stripePriceId = $plan->stripe_price_yearly_id;
-        }
+        } 
+        
+        
+        $subscription = $company->newSubscription($plan->name, $stripePriceId)
+            ->checkout([
+                'success_url' => config('app.portal_url') . '/sucesso-assinatura',
+                'cancel_url' => config('app.portal_url') . '/erro-assinatura',
+            ]);
 
-    $subscription = $company->newSubscription($plan->name, $stripePriceId)
-    ->checkout([
-        'success_url' => config('app.portal_url') . '/sucesso-assinatura',
-        'cancel_url' => config('app.portal_url') . '/cancelar-assinatura',
-    ]);
-
-    
-
-
-
-    return [
-        'subscription_url' => $subscription->url,
-    ];
+        return [
+            'subscription_url' => $subscription->url,
+        ];
     }
 }

@@ -26,33 +26,26 @@ class LoginController extends Controller
 
         if (!$user->hasVerifiedEmail()) {
 
-            Auth()->logout();
-
             throw new EmailIsNotVerifiedException();
         }
 
         $company = $user->company;
 
         if (!$company) {
-            Auth()->logout();
 
             throw new CompanyNotFoundException();
         }
 
         if (!$company->subscribed('Krediti') && $company->admin_id !== $user->id) {
 
-            Auth()->logout();
+
             throw new CompanyDontHasSubscriptionException();
+            
         }
 
         request()->session()->regenerate();
 
         $user->load('profile');
-
-
-        $subscription = $company->subscription('Krediti');
-
-        $stripe = $subscription->asStripeSubscription();
 
         return new UserResource($user);
     }

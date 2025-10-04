@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Models\Client;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -17,7 +18,7 @@ class ClientOfficeFactory extends Factory
     public function definition(): array
     {
         return [
-            'client_id' => fake()->numberBetween(1, 10),
+            'client_id' => Client::inRandomOrder()->first()->id,
             'name' => fake()->name(),
             'phone' => fake()->phoneNumber(),
             'zipcode' => fake()->postcode(),
