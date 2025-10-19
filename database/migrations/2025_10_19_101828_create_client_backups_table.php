@@ -11,8 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('client_profiles', function (Blueprint $table) {
-            $table->string('gender')->after('birth_date');
+        Schema::create('client_backups', function (Blueprint $table) {
+            $table->id();
+            $table->timestamps();
         });
     }
 
@@ -21,8 +22,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('client_profiles', function (Blueprint $table) {
-            $table->dropColumn('gender');
-        });
+        Schema::dropIfExists('client_backups');
     }
 };

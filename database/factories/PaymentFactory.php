@@ -25,7 +25,7 @@ class PaymentFactory extends Factory
             'client_id' => Client::inRandomOrder()->first()->id,
             'liberation_id' => Liberation::inRandomOrder()->first()->id,
             'amount' => fake()->randomFloat(2, 1000, 100000),
-            'payment_type' => fake()->randomElement(['Fator', 'Resgate', 'Abatimento']),
+            'payment_type' => fake()->randomElement(['Fator', 'Total', 'Parcial']),
             'company_id' => Company::inRandomOrder()->first()->id,
 
         ];

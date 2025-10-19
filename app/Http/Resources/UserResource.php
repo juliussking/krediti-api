@@ -18,9 +18,9 @@ class UserResource extends JsonResource
             'id' => $this->id,
             'name' => $this->name,
             'email' => $this->email,
-            'profile' => UserProfileResource::make($this->whenLoaded('profile')),
             'company_status' => $this->company?->subscription('Krediti')?->asStripeSubscription()?->status,
-            'company_hasSubscription' => !!$this->company?->subscribed('Krediti')
+            'company_hasSubscription' => !!$this->company?->subscribed('Krediti'),
+            'avatar' => $this->profile?->avatar,
 
             
         ];

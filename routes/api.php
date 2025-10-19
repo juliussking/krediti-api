@@ -9,17 +9,20 @@ use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\ClientAddressController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\CompanyController;
+use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PlanController;
 use App\Http\Controllers\SolicitationController;
 use App\Http\Controllers\Subscription\SubscriptionController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\UserController;
+use App\Http\Middleware\CheckUserAndClientCompanyForCreatePayment;
 use App\Http\Middleware\EnsureCompanyHasActivePlan;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('web')->group(function () {
-
+    
     Route::post('login', LoginController::class);
+
     Route::post('logout', LogoutController::class);
     Route::post('company-register', CompanyRegisterController::class);
 
@@ -40,29 +43,41 @@ Route::middleware('web')->group(function () {
 
             Route::get('tasks', [TaskController::class, 'index']);
             Route::post('create-task', [TaskController::class, 'store']);
+
+            //MIDDLEWARE PARA VERIFICAR TASK E USUARIO
             Route::put('update-task/{id}', [TaskController::class, 'updateCompleted']);
 
-            Route::put('client-update/{id}', [ClientController::class, 'update']);
-
-            Route::put('client-address-update/{id}', [ClientAddressController::class, 'update']);
-
-            Route::get('info-company', [CompanyController::class, 'show']);
             
-
+            Route::put('client-address-update/{id}', [ClientAddressController::class, 'update']);
+            
+            Route::get('info-company', [CompanyController::class]);
+            
             Route::get('clients', [ClientController::class, 'index']);
-
-
+            
+            
             Route::get('clients/statistics', [ClientController::class, 'statistics']);
-            Route::get('client-profile/{id}', [ClientController::class, 'show']);
             Route::post('client-register', [ClientController::class, 'store']);
+            
+            //GRUPA DE MIDDLEWARES PARA VERIFICAR USUARIO E CLIENTE
+            Route::get('client-profile/{id}', [ClientController::class, 'show']);
             Route::delete('client-delete/{id}', [ClientController::class, 'destroy']);
+            Route::put('client-update/{id}', [ClientController::class, 'update']);
 
             Route::get('solicitations', [SolicitationController::class, 'index']);
             Route::post('create-solicitation/{id}', [SolicitationController::class, 'store']);
+
+            //CRIAR GRUPO DE MIDDLEWARE PARA VERIFICAR USUARIO E CLIENTE PARA SOLICITATION
             Route::put('approve-solicitation/{id}', [SolicitationController::class, 'approve']);
             Route::put('recuse-solicitation/{id}', [SolicitationController::class, 'recuse']);
+            Route::put('cancel-solicitation/{id}', [SolicitationController::class, 'cancel']);
+            Route::put('edit-solicitation/{id}', [SolicitationController::class, 'update']);
             Route::put('counteroffer-solicitation/{id}', [SolicitationController::class, 'counteroffer']);
             Route::delete('delete-solicitation/{id}', [SolicitationController::class, 'destroy']);
+
+            Route::get('payments', [PaymentController::class, 'show']);
+            Route::post('create-payment/{id}', [PaymentController::class, 'store'])->middleware(CheckUserAndClientCompanyForCreatePayment::class);
+
+            //MIDDLEWARES
         });
     });
 });

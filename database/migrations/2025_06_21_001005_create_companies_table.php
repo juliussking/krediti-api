@@ -20,7 +20,7 @@ return new class extends Migration
             $table->string('email')->nullable();
             $table->string('site')->nullable();
             $table->string('status')->nullable();
-            $table->foreignId('admin_id')->nullable()->constrained('users')->cascadeOnDelete();
+            $table->foreignId('admin_id')->nullable();
             $table->timestamps();
         });
     }

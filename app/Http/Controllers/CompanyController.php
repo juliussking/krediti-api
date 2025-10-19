@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\CompanyNotFoundException;
 use App\Http\Resources\CompanyResource;
 use App\Models\Company;
 use Carbon\Carbon;
@@ -9,18 +10,17 @@ use Illuminate\Http\Request;
 
 class CompanyController extends Controller
 {
-    public function show()
+    public function __invoke()
     {
-        $company = Company::findOrFail(auth()->user()->company_id);
+        $company = Company::find(auth()->user()->company_id);
+
+        if (!$company) {
+            throw new CompanyNotFoundException();
+        }
 
         $subscription = $company->subscription('Krediti');
 
         $stripe = $subscription->asStripeSubscription();
-        
-
-        if (!$company) {
-            abort(404);
-        }
 
         return [
             'company' => new CompanyResource($company),

@@ -13,11 +13,16 @@ return new class extends Migration
     {
         Schema::create('payments', function (Blueprint $table) {
             $table->id();
+
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
             $table->foreignId('client_id')->constrained('clients')->cascadeOnDelete();
             $table->foreignId('liberation_id')->constrained('liberations')->cascadeOnDelete();
-            $table->integer('amount');
+            $table->foreignId('company_id')->constrained('companies')->cascadeOnDelete();
+            $table->decimal('amount', 10, 2); 
+            $table->decimal('total', 10, 2)->default(0);
+            $table->decimal('fator', 10, 2);
             $table->string('payment_type');
+
             $table->timestamps();
         });
     }

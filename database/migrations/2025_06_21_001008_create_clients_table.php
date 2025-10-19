@@ -13,10 +13,12 @@ return new class extends Migration
     {
         Schema::create('clients', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
+            $table->string('name'); 
             $table->string('email')->nullable();
             $table->string('person_type')->nullable();
-            $table->string('status')->nullable();
+            $table->decimal('debit', 10, 2)->default(0);
+            $table->string('status')->default('Novo');
+            $table->foreignId('company_id')->constrained('companies')->cascadeOnDelete();
             $table->timestamps();
         });
     }

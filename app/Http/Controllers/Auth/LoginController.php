@@ -48,5 +48,6 @@ class LoginController extends Controller
         $user->load('profile');
 
         return new UserResource($user);
+
     }
 }

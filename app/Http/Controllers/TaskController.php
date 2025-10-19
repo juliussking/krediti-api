@@ -15,13 +15,8 @@ class TaskController extends Controller
 {
     public function index()
     {
-        Log::info('>>> REQUISIÇÃO RECEBIDA', [
-            'rota' => request()->path(),
-            'ip' => request()->ip(),
-            'agente' => request()->header('User-Agent'),
-        ]);
-
-        $tasks = Task::orderBy('id', 'desc')->get();
+        $tasks = Task::orderBy('id', 'desc')
+            ->where('company_id', Auth()->user()->company_id)->get();
 
         return [
             'tasks' => TaskResource::collection($tasks),
@@ -34,10 +29,14 @@ class TaskController extends Controller
     {
         $input = $request->validated();
 
-        $task = Task::create([
+        $user = Auth()->user();
+
+        $user->tasks()create([
             'title' => $input['title'],
             'author' => Auth()->user()->name,
         ]);
+
+        $task = Task::latest()->first();
 
         return new CreateTaskResource($task);
     }

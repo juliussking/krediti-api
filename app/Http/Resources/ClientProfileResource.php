@@ -48,6 +48,8 @@ class ClientProfileResource extends JsonResource
             'register_date' => $this->created_at,
             'solicitations' => SolicitationResource::collection($this->solicitations),
             'payments' => PaymentResource::collection($this->payments),
+            'liberations' => LiberationResource::collection($this->liberations),
+            
             
 
         ];

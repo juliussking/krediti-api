@@ -13,17 +13,21 @@ return new class extends Migration
     {
         Schema::create('client_offices', function (Blueprint $table) {
             $table->id();
+
             $table->foreignId('client_id')->constrained('clients')->cascadeOnDelete();
+
             $table->string('name')->nullable();
             $table->string('zipcode')->nullable();
+            $table->string('phone')->nullable();
             $table->string('street')->nullable();
             $table->string('city')->nullable();
             $table->string('neighbor')->nullable();
             $table->integer('number')->nullable();
             $table->string('cnpj')->nullable();
-            $table->string('role')->nullable();
-            $table->integer('salary')->nullable();
-            $table->date('payment_date')->nullable();
+
+            $table->string('role');
+            $table->decimal('salary', 10, 2);
+            $table->date('payment_date');
             $table->date('admission_date')->nullable();
 
             $table->timestamps();

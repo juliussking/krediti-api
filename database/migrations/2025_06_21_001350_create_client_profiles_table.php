@@ -13,16 +13,14 @@ return new class extends Migration
     {
         Schema::create('client_profiles', function (Blueprint $table) {
             $table->id();
-            
+
             $table->foreignId('client_id')->constrained('clients')->cascadeOnDelete();
 
             $table->string('avatar')->nullable();
-
-            $table->date('birth_date');
-
-            $table->string('phone');
-
-            $table->string('marital_status');
+            $table->date('birth_date')->nullable();
+            $table->string('gender')->nullable();
+            $table->string('phone')->nullable();
+            $table->string('marital_status')->nullable();
 
             $table->timestamps();
         });

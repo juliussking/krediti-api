@@ -10,6 +10,10 @@ class Payment extends Model
     /** @use HasFactory<\Database\Factories\PaymentFactory> */
     use HasFactory;
 
+    protected $guarded = [
+        'id',
+    ];
+
     public function user()
     {
         return $this->belongsTo(User::class);
@@ -28,5 +32,10 @@ class Payment extends Model
     public function company()
     {
         return $this->belongsTo(Company::class);
+    }
+
+    public function backups()
+    {
+        return $this->hasMany(PaymentBackup::class);
     }
 }

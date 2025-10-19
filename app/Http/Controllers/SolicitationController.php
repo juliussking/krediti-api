@@ -2,26 +2,32 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\ApproveSolicitation;
+use App\Exceptions\SolicitationNotFoundException;
 use App\Http\Requests\SolicitationRequest;
 use App\Http\Resources\SolicitationResource;
 use App\Models\Liberation;
 use App\Models\Solicitation;
-use Illuminate\Container\Attributes\Auth;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class SolicitationController extends Controller
 {
     public function index()
     {
-        $solicitations = Solicitation::where('company_id', auth()->user()->company_id)->get();
+        $solicitations = Solicitation::where('company_id', auth()->user()->company_id)->paginate(10);
 
         return [
             'solicitations' => SolicitationResource::collection($solicitations),
-            'solicitations_count' => $solicitations->count(),
-            'solicitations_approved' => $solicitations->where('status', 'Aprovada')->count(),
-            'solicitations_pending' => $solicitations->where('status', 'Pendente')->count(),
-            'solicitations_reproved' => $solicitations->where('status', 'Recusada')->count(),
-    ]; 
+            'meta' => [
+                'solicitations_count' => $solicitations->count(),
+                'solicitations_approved' => $solicitations->where('status', 'Aprovada')->count(),
+                'solicitations_pending' => $solicitations->where('status', 'Pendente')->count(),
+                'solicitations_reproved' => $solicitations->where('status', 'Recusada')->count(),
+                'current_page' => $solicitations->currentPage(),
+                'last_page' => $solicitations->lastPage(),
+            ]
+        ];
     }
 
     public function store($id, SolicitationRequest $request)
@@ -40,48 +46,47 @@ class SolicitationController extends Controller
         $solicitation->save();
 
         return response()->json([
-            'Solicitation' => 'Solicitação criada com sucesso!',
+            'Solicitation' => 'SolicitationStoreSuccess',
         ]);
     }
 
+    public function update($id, Request $request) {} //CRIAR LÓGICA DE UPDATE
+
     public function approve($id)
     {
-        $solicitation = Solicitation::findOrFail($id);
+        $solicitation = DB::transaction(function () use ($id) {
 
-        if($solicitation->counteroffer) {
+            $solicitation = Solicitation::findOrFail($id);
 
-            $solicitation->amount_approved = $solicitation->counteroffer;
-            $solicitation->total = $solicitation->counteroffer * $solicitation->tax;
+            if ($solicitation->counteroffer) {
 
-        }else{
+                $solicitation->amount_approved = $solicitation->counteroffer;
+                $solicitation->total = $solicitation->counteroffer * $solicitation->tax;
+            } else {
 
-            $solicitation->amount_approved = $solicitation->amount_requested;
-        }
+                $solicitation->amount_approved = $solicitation->amount_requested;
+            }
 
-        $solicitation->user_id = Auth()->user()->id;
-        $solicitation->status = 'Aprovada';
+            $solicitation->user_id = Auth()->user()->id;
+            $solicitation->status = 'Aprovada';
 
-        $solicitation->save();
+            $solicitation->save();
 
-        $solicitation->client->status = 'Ativo';
-        $solicitation->client->save();
 
-        $liberation = Liberation::create([
-            'user_id' => Auth()->user()->id,
-            'client_id' => $solicitation->client_id,
-            'amount' => $solicitation->amount_approved,
-            'status' => 'Ativo',
-            'expiration_date' => now()->addDays(30),
-            'company_id' => Auth()->user()->company_id
-        ]);
 
-        return response()->json([
-            'Solicitation' => 'Solicitação aprovada com sucesso!',
-            'total' => $solicitation->total,
-            'approved_value' => $solicitation->counteroffer ?? $solicitation->amount_requested,
+            $client = $solicitation->client;
 
-        ]);
+            $client->status = 'Ativo';
+            $client->debit += $solicitation->total;
+            $client->save();
 
+            return [
+                $solicitation,
+                'msg' => 'SolicitationApproveSuccess',
+            ];
+        });
+
+        ApproveSolicitation::dispatch($solicitation);
     }
 
     public function recuse($id)
@@ -92,18 +97,36 @@ class SolicitationController extends Controller
         $solicitation->save();
 
         return response()->json([
-            'Solicitation' => 'Solicitação recusada com sucesso!',
+            'msg' => 'SolicitationRecuseSuccess',
+        ]);
+    }
+
+    public function cancel($id)
+    {
+        $solicitation = Solicitation::findOrFail($id);
+
+        $solicitation->status = 'Cancelada';
+        $solicitation->save();
+
+        return response()->json([
+            'msg' => 'SolicitationCancelSuccess',
         ]);
     }
 
     public function counteroffer($id, Request $request)
     {
+
+        $solicitation = Solicitation::find($id);
+
+        if (!$solicitation) {
+
+            throw new SolicitationNotFoundException();
+        }
+
         $input = $request->validate([
             'counteroffer' => ['required', 'numeric'],
             'tax' => ['required', 'string'],
         ]);
-
-        $solicitation = Solicitation::findOrFail($id);
 
         $solicitation->counteroffer = $input['counteroffer'];
         $solicitation->tax = $input['tax'];
@@ -113,25 +136,26 @@ class SolicitationController extends Controller
         $solicitation->save();
 
         return response()->json([
-            'Solicitation' => 'Solicitação enviada com sucesso!',
+            'msg' => 'SolicitationCounterofferSuccess',
             'counteroffer' => $solicitation->counteroffer,
-            'total' => $solicitation->counteroffer * $solicitation->tax,
+            'total' => $solicitation->total,
             'tax' => $solicitation->tax
         ]);
     }
 
     public function destroy($id)
     {
-        $solicitation = Solicitation::findOrFail($id);
+        $solicitation = Solicitation::find($id);
 
-        if(!$solicitation) {
-            return response()->json([
-                'error' => 'Solicitação não encontrada',
-            ]);
+        if (!$solicitation) {
+
+            throw new SolicitationNotFoundException();
         }
 
         $solicitation->delete();
 
-
+        return response()->json([
+            'msg' => 'SolicitationDestroySuccess',
+        ]);
     }
 }

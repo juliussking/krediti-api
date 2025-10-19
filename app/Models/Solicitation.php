@@ -26,12 +26,7 @@ class Solicitation extends Model
 
     public function liberation()
     {
-        return $this->belongsTo(Liberation::class);
-    }
-
-    public function payments()
-    {
-        return $this->hasMany(Payment::class);
+        return $this->hasOne(Liberation::class);
     }
 
     public function company()

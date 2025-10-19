@@ -13,11 +13,14 @@ return new class extends Migration
     {
         Schema::create('client_reference_contacts', function (Blueprint $table) {
             $table->id();
+
             $table->foreignId('client_id')->constrained('clients')->cascadeOnDelete();
-            $table->string('name');
-            $table->integer('phone');
-            $table->string('relation');
+
+            $table->string('name'); 
+            $table->string('phone');
+            $table->string('relation'); 
             $table->text('observation')->nullable();
+
             $table->timestamps();
         });
     }

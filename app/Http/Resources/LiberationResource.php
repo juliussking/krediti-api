@@ -2,11 +2,10 @@
 
 namespace App\Http\Resources;
 
-use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-class PaymentResource extends JsonResource
+class LiberationResource extends JsonResource
 {
     /**
      * Transform the resource into an array.
@@ -19,11 +18,10 @@ class PaymentResource extends JsonResource
             'id' => $this->id,
             'user_name' => $this->user->name,
             'client_name' => $this->client->name,
-            'liberation_id' => $this->liberation_id,
             'amount' => $this->amount,
-            'client_debit' => $this->client->debit,
-            'payment_type' => $this->payment_type,
-            'payment_date' => $this->created_at,
+            'status' => $this->status,
+            'expiration_date' => $this->expiration_date,
+            'liberation_date' => $this->created_at
         ];
     }
 }

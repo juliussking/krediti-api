@@ -31,7 +31,7 @@ class RegisterClientRequest extends FormRequest
             'street' => ['required','string', 'max:255'], //*
             'city' => ['string', 'max:255'],
             'neighbor' => ['string', 'max:255'],
-            'client_number' => ['integer', 'max:255'],
+            'client_number' => ['integer'],
             'reference_point' => ['required','string', 'max:255'], //*
             'birth_date' => ['required','date', 'max:255'], //*
             'gender' => ['string', 'max:255'],
