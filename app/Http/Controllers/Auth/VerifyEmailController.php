@@ -32,7 +32,7 @@ class VerifyEmailController extends Controller
         $user->save();
 
         return response()->json([
-            'message' => 'Email verificado com sucesso!',
+            'msg' => 'EmailVerified!',
         ]);
 
     }

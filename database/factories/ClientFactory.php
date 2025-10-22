@@ -23,6 +23,7 @@ class ClientFactory extends Factory
             'person_type' => fake()->randomElement(['Fisica', 'Juridica']),
             'status' => fake()->randomElement(['Ativo', 'Vencido', 'Quitado']),
             'company_id' => Company::inRandomOrder()->first()->id,
+            'created_at' => fake()->dateTimeBetween('-6 months','now'),
             
         ];
     }

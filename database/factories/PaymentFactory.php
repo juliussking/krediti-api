@@ -27,6 +27,7 @@ class PaymentFactory extends Factory
             'amount' => fake()->randomFloat(2, 1000, 100000),
             'payment_type' => fake()->randomElement(['Fator', 'Total', 'Parcial']),
             'company_id' => Company::inRandomOrder()->first()->id,
+            'fator' => fake()->randomFloat(2, 1000, 100000),
 
         ];
     }

@@ -3,30 +3,66 @@
 namespace App\Http\Controllers;
 
 use App\Events\ApproveSolicitation;
+use App\Events\BeforeApproveSolicitation;
+use App\Events\SolicitationRecused;
+use App\Exceptions\SolicitationHasBeenApprovedException;
+use App\Exceptions\SolicitationHasBeenRecusedException;
 use App\Exceptions\SolicitationNotFoundException;
+use App\Filters\DateBetweenFilter;
 use App\Http\Requests\SolicitationRequest;
 use App\Http\Resources\SolicitationResource;
-use App\Models\Liberation;
 use App\Models\Solicitation;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Spatie\QueryBuilder\AllowedFilter;
+use Spatie\QueryBuilder\QueryBuilder;
 
 class SolicitationController extends Controller
 {
     public function index()
     {
-        $solicitations = Solicitation::where('company_id', auth()->user()->company_id)->paginate(10);
+        $solicitations = QueryBuilder::for(Solicitation::class)
+            ->where('company_id', Auth::user()->company_id) // filtro fixo
+            ->allowedFilters([
+                AllowedFilter::exact('id'),
+                AllowedFilter::exact('client_id'),
+                AllowedFilter::partial('user_name'),
+                AllowedFilter::partial('amount_requested'),
+                AllowedFilter::partial('counteroffer'),
+                AllowedFilter::partial('amount_approved'),
+                AllowedFilter::partial('tax'),
+                AllowedFilter::partial('total'),
+                AllowedFilter::partial('status'),
+                AllowedFilter::custom('created_at', new DateBetweenFilter()),
+            ])
+            ->paginate(10);
 
         return [
             'solicitations' => SolicitationResource::collection($solicitations),
             'meta' => [
-                'solicitations_count' => $solicitations->count(),
-                'solicitations_approved' => $solicitations->where('status', 'Aprovada')->count(),
-                'solicitations_pending' => $solicitations->where('status', 'Pendente')->count(),
-                'solicitations_reproved' => $solicitations->where('status', 'Recusada')->count(),
+
+                'solicitations_filter_count' => $solicitations->count(),
+                'solicitations_filter_approved' => $solicitations->where('status', 'Aprovada')->count(),
+                'solicitations_filter_pending' => $solicitations->where('status', 'Pendente')->count(),
+                'solicitations_filter_reproved' => $solicitations->where('status', 'Recusada')->count(),
+
                 'current_page' => $solicitations->currentPage(),
                 'last_page' => $solicitations->lastPage(),
             ]
+        ];
+    }
+
+    public function statistics()
+    {
+        $solicitation = Solicitation::where('company_id', Auth()->user()->company_id)->get();
+
+        return [
+
+            'solicitations_count' => $solicitation->count(),
+            'solicitations_approved' => $solicitation->where('status', 'Aprovada')->count(),
+            'solicitations_pending' => $solicitation->where('status', 'Pendente')->count(),
+            'solicitations_reproved' => $solicitation->where('status', 'Recusada')->count(),
         ];
     }
 
@@ -34,7 +70,7 @@ class SolicitationController extends Controller
     {
         $input = $request->validated();
 
-        $solicitation = Solicitation::create([
+        Solicitation::create([
             'user_id' => Auth()->user()->id,
             'client_id' => $id,
             'tax' => $input['tax'],
@@ -43,20 +79,53 @@ class SolicitationController extends Controller
             'company_id' => Auth()->user()->company_id
         ]);
 
-        $solicitation->save();
-
         return response()->json([
             'Solicitation' => 'SolicitationStoreSuccess',
         ]);
     }
 
-    public function update($id, Request $request) {} //CRIAR LÓGICA DE UPDATE
+    public function update($id, SolicitationRequest $request)
+    {
+        $input = $request->validated();
+
+        $solicitation = Solicitation::find($id);
+
+        if (!$solicitation) {
+
+            throw new SolicitationNotFoundException();
+        }
+
+        $amount = $input['amount_requested'] ?? $solicitation->amount_requested;
+        $tax = $input['tax'] ?? $solicitation->tax;
+
+        $solicitation->update([
+            'amount_requested' => $amount,
+            'tax' => $tax,
+            'total' => $amount * $tax,
+        ]);
+    }
 
     public function approve($id)
     {
+
+
         $solicitation = DB::transaction(function () use ($id) {
 
-            $solicitation = Solicitation::findOrFail($id);
+            $solicitation = Solicitation::find($id);
+
+
+            if (!$solicitation) {
+
+                throw new SolicitationNotFoundException();
+            }
+
+
+            if ($solicitation->status === 'Aprovado' || $solicitation->amount_approved > 0) {
+
+                throw new SolicitationHasBeenApprovedException();
+            }
+
+            BeforeApproveSolicitation::dispatch($solicitation);
 
             if ($solicitation->counteroffer) {
 
@@ -72,44 +141,48 @@ class SolicitationController extends Controller
 
             $solicitation->save();
 
-
-
             $client = $solicitation->client;
 
             $client->status = 'Ativo';
             $client->debit += $solicitation->total;
             $client->save();
 
-            return [
-                $solicitation,
-                'msg' => 'SolicitationApproveSuccess',
-            ];
+            return
+                $solicitation;
         });
 
         ApproveSolicitation::dispatch($solicitation);
+
+        return response()->json([
+            'msg' => 'SolicitationApproveSuccess',
+        ]);
     }
 
     public function recuse($id)
     {
-        $solicitation = Solicitation::findOrFail($id);
+        $solicitation = Solicitation::find($id);
+
+        if (!$solicitation) {
+
+            throw new SolicitationNotFoundException();
+        } elseif ($solicitation->status === 'Recusada') {
+
+            throw new SolicitationHasBeenRecusedException();
+        }
+
+        if ($solicitation->status === 'Aprovada') {
+
+            SolicitationRecused::dispatch($solicitation);
+
+            return;
+        }
 
         $solicitation->status = 'Recusada';
+
         $solicitation->save();
 
         return response()->json([
             'msg' => 'SolicitationRecuseSuccess',
-        ]);
-    }
-
-    public function cancel($id)
-    {
-        $solicitation = Solicitation::findOrFail($id);
-
-        $solicitation->status = 'Cancelada';
-        $solicitation->save();
-
-        return response()->json([
-            'msg' => 'SolicitationCancelSuccess',
         ]);
     }
 

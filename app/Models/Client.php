@@ -59,4 +59,9 @@ class Client extends Model
         return $this->belongsTo(Company::class);
     }
 
+    public function backups()
+    {
+        return $this->hasMany(ClientBackup::class);
+    }
+
 }

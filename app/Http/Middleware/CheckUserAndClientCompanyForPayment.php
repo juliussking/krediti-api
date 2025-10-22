@@ -2,15 +2,14 @@
 
 namespace App\Http\Middleware;
 
-use App\Exceptions\LiberationNotFoundException;
-use App\Exceptions\ThisLiberationIsPaidOffException;
+use App\Exceptions\PaymentNotFoundException;
 use App\Exceptions\UserAndClientCompanyDontMatchException;
-use App\Models\Liberation;
+use App\Models\Payment;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-class CheckUserAndClientCompanyForCreatePayment
+class CheckUserAndClientCompanyForPayment
 {
     /**
      * Handle an incoming request.
@@ -19,29 +18,24 @@ class CheckUserAndClientCompanyForCreatePayment
      */
     public function handle(Request $request, Closure $next): Response
     {
-        $user = auth()->user();
-
         $id = $request->route('id');
 
-        $liberation = Liberation::find($id);
+        $user = auth()->user();
 
-        if (!$liberation) {
+        $payment = Payment::find($id);
 
-            throw new LiberationNotFoundException();
+        $client = $payment->client;
+
+        if (!$payment) {
+
+            throw new PaymentNotFoundException();
         }
 
-        $client = $liberation->client;
 
         if ($user->company_id !== $client->company_id) {
 
             throw new UserAndClientCompanyDontMatchException();
         }
-
-        if ($liberation->status == 'Quitado') {
-
-            throw new ThisLiberationIsPaidOffException();
-        }
-
 
         return $next($request);
     }

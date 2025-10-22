@@ -2,21 +2,43 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\BeforePayment;
 use App\Events\PaymentCreated;
 use App\Exceptions\ExceedsTotalException;
 use App\Exceptions\LiberationNotFoundException; // Corrigido
+use App\Exceptions\PaymentNotFoundException;
 use App\Exceptions\ThisLiberationIsPaidOffException;
+use App\Exceptions\ValueBelowMinimumException;
+use App\Filters\ClientIdNameFilter;
+use App\Filters\DateBetweenFilter;
+use App\Filters\UserIdNameFilter;
 use App\Http\Requests\PaymentRequest;
 use App\Http\Resources\PaymentResource;
 use App\Models\Liberation;
 use App\Models\Payment;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Spatie\QueryBuilder\AllowedFilter;
+use Spatie\QueryBuilder\QueryBuilder;
 
 class PaymentController extends Controller
 {
     public function show()
     {
-        $payments = Payment::where('company_id', auth()->user()->company_id)->paginate(10);
+        $payments = QueryBuilder::for(Payment::class)
+            ->where('company_id', Auth::user()->company_id) // filtro fixo da empresa
+            ->allowedFilters([
+
+                AllowedFilter::exact('id'),
+                AllowedFilter::partial('amount'),
+                AllowedFilter::partial('client_debit'),
+                AllowedFilter::partial('payment_type'),
+                AllowedFilter::custom('user_id', new UserIdNameFilter()), //ESSE FILTRO VERIFICA POR NOME * APLICAR NO FRONT *
+                AllowedFilter::custom('client_id', new ClientIdNameFilter()), //ESSE FILTRO VERIFICA POR NOME * APLICAR NO FRONT *
+                AllowedFilter::custom('created_at', new DateBetweenFilter()),
+            ])
+            ->paginate(10);
+
 
         return [
             'payments' => PaymentResource::collection($payments),
@@ -33,11 +55,14 @@ class PaymentController extends Controller
 
     public function store($id, PaymentRequest $request)
     {
+
         $request->validated();
 
-        $payment = DB::transaction(function () use ($id, $request) {
-            
+        [$payment, $isFator, $liberation] = DB::transaction(function () use ($id, $request) {
+
             $liberation = Liberation::find($id);
+
+            BeforePayment::dispatch($liberation);
 
             if (!$liberation) {
                 throw new LiberationNotFoundException();
@@ -62,8 +87,12 @@ class PaymentController extends Controller
                 $baseBalance = $total - $amount;
                 $fator = $lastPayment->fator;
             }
-            if ($amount > $total || $amount < $fator) {
+            if ($amount > $total) {
+
                 throw new ExceedsTotalException();
+            } elseif ($amount < $fator) {
+
+                throw new ValueBelowMinimumException();
             }
 
             $paymentType = match (true) {
@@ -86,49 +115,92 @@ class PaymentController extends Controller
                 'fator' => ($baseBalance * $tax) - $baseBalance,
             ]);
 
+            $isFator = ($fator == $amount);
 
-            if ($amount !== $fator) {
-
-                $paymentsForLiberation = $liberation->payments()->count();
-
-                $payments = $liberation->payments()->latest()->take(2)->get();
-
-                $client = $liberation->client;
-
-                if ($paymentsForLiberation > 1) {
-
-                    $penultPayment = $payments[1]->total;
-
-                    $latestPayment = $payments[0]->total;
-
-                    $client->debit = $client->debit + $latestPayment - $penultPayment;
-
-                } else {
-
-                    $client->debit = $client->debit - $solicitation->total + $newPayment->total;
-                }
-            }
-
-            switch ($newPayment->payment_type) {
-                case 'Total':
-                    $client->status = 'Quitado';
-                    $liberation->status = 'Quitado';
-                    break;
-                default:
-                    $client->status = 'Ativo';
-                    $liberation->status = 'Ativo';
-                    break;
-            }
-
-            $liberation->save();
-            $client->save();
-
-            return $newPayment;
+            return [$newPayment, $isFator, $liberation];
         });
+
+        PaymentCreated::dispatch(
+            $payment,
+            $isFator,
+            $liberation
+        );
 
         return response()->json([
             'msg' => 'PaymentStoreSuccess',
             'payment' => new PaymentResource($payment),
         ]);
+    }
+
+    public function update($id, PaymentRequest $request)
+    {
+        $payment = Payment::find($id);
+
+        if (!$payment) {
+
+            throw new PaymentNotFoundException();
+        }
+
+        $liberation_id = $payment->liberation->id;
+
+        $clientBackup = $payment->client->backups()->latest()->first();
+
+        $payment->client->update([
+
+            'debit' => $clientBackup->debit,
+            'status' => $clientBackup->status,
+
+        ]);
+
+        $liberationBackup = $payment->liberation->backups()->latest()->first();
+
+        $payment->liberation->update([
+
+            'amount' => $liberationBackup->amount,
+            'status' => $liberationBackup->status,
+
+        ]);
+
+        $payment->delete();
+
+        $clientBackup->delete();
+
+        $liberationBackup->delete();
+
+        $this->store($liberation_id, $request);
+    }
+
+    public function destroy($id)
+    {
+        $payment = Payment::find($id);
+
+        if (!$payment) {
+
+            throw new PaymentNotFoundException();
+        }
+
+        $clientBackup = $payment->client->backups()->latest()->first();
+
+        $payment->client->update([
+
+            'debit' => $clientBackup->debit,
+            'status' => $clientBackup->status,
+
+        ]);
+
+        $liberationBackup = $payment->liberation->backups()->latest()->first();
+
+        $payment->liberation->update([
+
+            'amount' => $liberationBackup->amount,
+            'status' => $liberationBackup->status,
+
+        ]);
+
+        $clientBackup->delete();
+
+        $liberationBackup->delete();
+
+        $payment->delete();
     }
 }

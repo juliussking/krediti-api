@@ -2,15 +2,15 @@
 
 namespace App\Http\Controllers\Auth;
 
-use App\Events\UserRegistered;
+use App\Events\CompanyRegistered;
 use App\Exceptions\AdminEmailAlreadyExistsException;
 use App\Exceptions\CnpjAlreadyExistsException;
 use App\Exceptions\CompanyEmailAlreadyExistsException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CompanyRegisterRequest;
 use App\Models\Company;
-use App\Models\Plan;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class CompanyRegisterController extends Controller
@@ -33,7 +33,6 @@ class CompanyRegisterController extends Controller
             throw new CompanyEmailAlreadyExistsException();
         }
 
-
         $companies = Company::whereCnpj($input['cnpj'])->exists();
 
         if ($companies) {
@@ -41,55 +40,41 @@ class CompanyRegisterController extends Controller
             throw new CnpjAlreadyExistsException();
         }
 
-        $company = Company::create([
-            'social_reason' => $input['social_reason'],
-            'fantasy_name' => $input['fantasy_name'],
-            'cnpj' => $input['cnpj'],
-            'phone' => $input['company_phone'],
-            'email' => $input['company_email'],
-            'status' => 'Pendente',
-        ]);
+        [$company, $user] = DB::transaction(function () use ($input) {
 
-        $user = User::create([
-            'name' => $input['admin_name'],
-            'email' => $input['admin_email'],
-            'password' => bcrypt($input['password']),
-            'company_id' => $company->id,
-            'token' => Str::uuid(),
-        ]);
+            $company = Company::create([
+                'social_reason' => $input['social_reason'],
+                'fantasy_name' => $input['fantasy_name'],
+                'cnpj' => $input['cnpj'],
+                'phone' => $input['company_phone'],
+                'email' => $input['company_email'],
+                'status' => 'Pendente',
+            ]);
 
-        $user->profile()->create([
-            'phone' => $input['admin_phone'],
-            'birthday' => $input['admin_birthday'],
-        ]);
+            $user = User::create([
+                'name' => $input['admin_name'],
+                'email' => $input['admin_email'],
+                'password' => bcrypt($input['password']),
+                'company_id' => $company->id,
+                'token' => Str::uuid(),
+            ]);
+
+            return [$company,$user];
+        });
 
         $company->admin_id = $user->id;
-
-        $company->createOrGetStripeCustomer([
-            'name'  => $user->name,
-            'email' => $user->email
-        ]);
-
-        $plan = Plan::findOrFail(1);
-
-         $stripePriceId = 'monthly'
-        ? $plan->stripe_price_yearly_id
-        : $plan->stripe_price_monthly_id;
-
-        $subscription = $company->newSubscription($plan->name, $stripePriceId)
-        ->trialDays(30)
-        ->create();
-
 
         $company->save();
         $user->save();
 
-
-        UserRegistered::dispatch($user);
+        CompanyRegistered::dispatch(
+            $user,
+            $company,
+            ['admin_phone' => $input['admin_phone'], 'admin_birthday' => $input['admin_birthday']]
+        );
 
         return response()->json([
-            'message' => 'Empresa cadastrada com sucesso',
-            'subscription' => $subscription
+            'msg' => 'CompanyRegisterSuccess',
         ]);
     }
 }

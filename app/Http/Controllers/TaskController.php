@@ -31,12 +31,10 @@ class TaskController extends Controller
 
         $user = Auth()->user();
 
-        $user->tasks()create([
+        $task = $user->tasks()->create([
             'title' => $input['title'],
             'author' => Auth()->user()->name,
         ]);
-
-        $task = Task::latest()->first();
 
         return new CreateTaskResource($task);
     }
@@ -55,8 +53,5 @@ class TaskController extends Controller
 
         $task->save();
 
-        return [
-            'task_completed' => $task->completed,
-        ];
     }
 }

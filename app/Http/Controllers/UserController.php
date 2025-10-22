@@ -8,6 +8,7 @@ use App\Http\Resources\UsersStatisticsResource;
 use App\Models\User;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class UserController extends Controller
 {
@@ -42,24 +43,26 @@ class UserController extends Controller
     {
         $input = $request->validated();
 
-        $user = User::create([
-            'token' => Str::uuid(),
-            'name' => $input['name'],
-            'email' => $input['email'],
-            'password' => bcrypt($input['password']),
-            'company_id' => auth()->user()->company_id,
+        $user = DB::transaction(function () use ($input) {
+
+            $user = User::create([
+                'token' => Str::uuid(),
+                'name' => $input['name'],
+                'email' => $input['email'],
+                'password' => bcrypt($input['password']),
+                'company_id' => auth()->user()->company_id,
+            ]);
+
+            return $user;
+        });
+
+        UserRegistered::dispatch(
+            $user,
+            ['phone' => $input['phone'], 'birthday' => $input['birthday']]
+        );
+
+        return response()->json([
+            'msg' => 'UserRegisterSuccess',
         ]);
-
-        $user->profile()->create([
-            'user_id' => $user->id,
-            'birthday' => $input['birthday'],
-            'phone' => $input['phone'],
-        ]);
-
-        $user->save();
-        UserRegistered::dispatch($user);
-        
-        return $user;
-
     }
 }

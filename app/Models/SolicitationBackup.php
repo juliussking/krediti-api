@@ -4,13 +4,13 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class PaymentBackup extends Model
+class SolicitationBackup extends Model
 {
        protected $guarded = [
         'id',
     ];
-    public function payment()
+    public function solicitation()
     {
-        return $this->belongsTo(Payment::class);
+        return $this->belongsTo(Solicitation::class);
     }
 }

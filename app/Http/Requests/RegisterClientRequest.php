@@ -46,7 +46,7 @@ class RegisterClientRequest extends FormRequest
             'office_neighbor' => ['string', 'max:255'],
             'office_phone' => ['string', 'max:255'],
             'office_city' => ['string', 'max:255'],
-            'office_number' => ['integer', 'max:255'],
+            'office_number' => ['integer'],
             'office_cnpj' => ['max:255'],
             'office_role' => ['required','string', 'max:255'], //*
             'office_salary' => ['required', 'max:255'], //*
