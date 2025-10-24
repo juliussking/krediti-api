@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Exceptions\ClientNotFoundException;
+use App\Filters\ClientGlobalSearchFilter;
 use App\Filters\DateBetweenFilter;
 use App\Http\Requests\RegisterClientRequest;
 use App\Http\Resources\ClientProfileResource;
@@ -26,16 +27,21 @@ class ClientController extends Controller
             ->where('company_id', Auth::user()->company_id)
             ->allowedFilters(
                 AllowedFilter::exact('id'),
+                AllowedFilter::exact('person_type'),
+                AllowedFilter::exact('status'),
+                AllowedFilter::custom('search', new ClientGlobalSearchFilter()),
                 AllowedFilter::custom('created_at', new DateBetweenFilter()),
-                ['name', 'email', 'person_type', 'status']
             )
-            ->paginate(10);
+            ->paginate(10)
+            ->appends(request()->query());
 
         $totalClients = Client::where('company_id', Auth()->user()->company_id)->get();
 
         return [
 
             'clients' => ClientResource::collection($clients),
+
+            'links' => $clients->toArray()['links'] ?? [],
 
             'meta' => [
                 'current_page' => $clients->currentPage(),
