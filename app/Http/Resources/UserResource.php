@@ -21,6 +21,7 @@ class UserResource extends JsonResource
             'company_status' => $this->company?->subscription('Krediti')?->asStripeSubscription()?->status,
             'company_hasSubscription' => !!$this->company?->subscribed('Krediti'),
             'avatar' => $this->profile?->avatar,
+            'roles' => $this->getRoleNames()
 
             
         ];

@@ -59,6 +59,8 @@ class CompanyRegisterController extends Controller
                 'token' => Str::uuid(),
             ]);
 
+            $user->assignRole('admin');
+
             return [$company,$user];
         });
 

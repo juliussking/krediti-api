@@ -24,8 +24,8 @@ class UserProfileCreate
         $user = $event->user;
 
         $user->profile()->create([
-            'phone' => $event->input['phone'],
-            'birthday' => $event->input['birthday'],
+            'phone' => $event->input['admin_phone'],
+            'birthday' => $event->input['admin_birthday'],
         ]);
     }
 }

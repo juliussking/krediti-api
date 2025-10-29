@@ -8,7 +8,9 @@ use App\Events\SolicitationRecused;
 use App\Exceptions\SolicitationHasBeenApprovedException;
 use App\Exceptions\SolicitationHasBeenRecusedException;
 use App\Exceptions\SolicitationNotFoundException;
+use App\Filters\ClientGlobalSearchFilter;
 use App\Filters\DateBetweenFilter;
+use App\Filters\UserIdNameFilter;
 use App\Http\Requests\SolicitationRequest;
 use App\Http\Resources\SolicitationResource;
 use App\Models\Solicitation;
@@ -25,27 +27,36 @@ class SolicitationController extends Controller
         $solicitations = QueryBuilder::for(Solicitation::class)
             ->where('company_id', Auth::user()->company_id) // filtro fixo
             ->allowedFilters([
-                AllowedFilter::exact('id'),
-                AllowedFilter::exact('client_id'),
-                AllowedFilter::partial('user_name'),
+                AllowedFilter::custom('user_id', new UserIdNameFilter()),
+                AllowedFilter::custom('client_id', new UserIdNameFilter()),
+                AllowedFilter::exact('status'),
                 AllowedFilter::partial('amount_requested'),
                 AllowedFilter::partial('counteroffer'),
                 AllowedFilter::partial('amount_approved'),
                 AllowedFilter::partial('tax'),
                 AllowedFilter::partial('total'),
-                AllowedFilter::partial('status'),
                 AllowedFilter::custom('created_at', new DateBetweenFilter()),
+                AllowedFilter::custom('search', new ClientGlobalSearchFilter()),
             ])
             ->paginate(10);
+
+            $totalSolicitations = Solicitation::where('company_id', Auth()->user()->company_id)->get();
 
         return [
             'solicitations' => SolicitationResource::collection($solicitations),
             'meta' => [
+                'solicitations_total' => $totalSolicitations->count(),
+                'solicitations_approved' => $totalSolicitations->where('status', 'Aprovada')->count(),
+                'solicitations_pending' => $totalSolicitations->where('status', 'Pendente')->count(),
+                'solicitations_reproved' => $totalSolicitations->where('status', 'Recusada')->count(),
 
                 'solicitations_filter_count' => $solicitations->count(),
                 'solicitations_filter_approved' => $solicitations->where('status', 'Aprovada')->count(),
                 'solicitations_filter_pending' => $solicitations->where('status', 'Pendente')->count(),
                 'solicitations_filter_reproved' => $solicitations->where('status', 'Recusada')->count(),
+
+                'links' => $solicitations->toArray()['links'] ?? [],
+
 
                 'current_page' => $solicitations->currentPage(),
                 'last_page' => $solicitations->lastPage(),

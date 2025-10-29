@@ -3,26 +3,38 @@
 namespace App\Http\Controllers;
 
 use App\Events\UserRegistered;
+use App\Exceptions\UserNotAuthorizedException;
+use App\Filters\DateBetweenFilter;
+use App\Filters\UserGlobalSearchFilter;
 use App\Http\Requests\UserRegisterRequest;
 use App\Http\Resources\UsersStatisticsResource;
 use App\Models\User;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Spatie\QueryBuilder\AllowedFilter;
+use Spatie\QueryBuilder\QueryBuilder;
 
 class UserController extends Controller
 {
     public function show()
     {
-        $users = User::where('company_id', auth()->user()->company_id)->paginate(10);
+        $users = QueryBuilder::for(User::class)
+            ->where('company_id', Auth::user()->company_id)
+            ->allowedFilters(
+                AllowedFilter::custom('search', new UserGlobalSearchFilter()),
+                AllowedFilter::custom('created_at', new DateBetweenFilter()),
+            )
+            ->paginate(10)
+            ->appends(request()->query());
 
         return [
             'users' => UsersStatisticsResource::collection($users),
             'meta' => [
                 'current_page' => $users->currentPage(),
                 'last_page' => $users->lastPage(),
-                'users_count' => $users->count(),
-                'users_active' => $users->where('status', 'Ativo')->count(),
+                'links' => $users->toArray()['links'] ?? [],
             ],
         ];
     }
@@ -30,17 +42,26 @@ class UserController extends Controller
     public function statistics()
     {
         $user = User::where('company_id', Auth()->user()->company_id)->get();
-        return [
 
-            'user_count' => $user->count(),
-            'admin_count' => $user->where('status', 'Ativo')->count(),
-            'gerent_count' => $user->where('status', 'Vencido')->count(),
-            'clients_paid_off' => $user->where('status', 'Quitado')->count(),
+        $totalUsers = $user->count();
+        $usersActive = $user->where('status', 'Ativo')->count();
+        $usersInactive = $user->where('status', 'Inactive')->count();
+        $usersBlocked = $user->where('status', 'Blocked')->count();
+
+        return [
+            'meta' => [
+                'users_count' => $totalUsers,
+                'users_active' => $usersActive,
+                'users_inactive' => $usersInactive,
+                'users_blocked' => $usersBlocked
+            ]
         ];
     }
 
     public function store(UserRegisterRequest $request)
     {
+        $user = Auth()->user();
+
         $input = $request->validated();
 
         $user = DB::transaction(function () use ($input) {

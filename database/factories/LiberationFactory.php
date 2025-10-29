@@ -4,6 +4,7 @@ namespace Database\Factories;
 
 use App\Models\Client;
 use App\Models\Company;
+use App\Models\Solicitation;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -26,6 +27,7 @@ class LiberationFactory extends Factory
             'status' => fake()->randomElement(['À vencer', 'Aprovado', 'Vencido', 'Quitado']),
             'expiration_date' => fake()->date(),
             'company_id' => Company::inRandomOrder()->first()->id,
+            'solicitation_id' => Solicitation::inRandomOrder()->first()->id
         ];
     }
 }

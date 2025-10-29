@@ -15,6 +15,9 @@ use App\Http\Controllers\SolicitationController;
 use App\Http\Controllers\Subscription\SubscriptionController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\UserController;
+use App\Http\Middleware\CheckIfUserForPainelAccess;
+use App\Http\Middleware\CheckPermission;
+use App\Http\Middleware\CheckUserAndClientCompany;
 use App\Http\Middleware\CheckUserAndClientCompanyForClient;
 use App\Http\Middleware\CheckUserAndClientCompanyForCreatePayment;
 use App\Http\Middleware\CheckUserAndClientCompanyForPayment;
@@ -24,7 +27,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware('web')->group(function () {
 
-    Route::post('login', LoginController::class);
+    Route::post('login', LoginController::class)->middleware(CheckIfUserForPainelAccess::class);
 
     Route::post('logout', LogoutController::class);
 
@@ -42,44 +45,48 @@ Route::middleware('web')->group(function () {
         Route::middleware(EnsureCompanyHasActivePlan::class)->group(function () {
 
             Route::get('users', [UserController::class, 'show']);
-            Route::post('user-register', [UserController::class, 'store']);
+            Route::get('users/statistics', [UserController::class, 'statistics']);
+            Route::post('user-register', [UserController::class, 'store'])->middleware(CheckPermission::class . ':criar usuarios');
 
             Route::get('tasks', [TaskController::class, 'index']);
-            Route::post('create-task', [TaskController::class, 'store']);
-            Route::put('update-task/{id}', [TaskController::class, 'updateCompleted']);
+            Route::post('create-task', [TaskController::class, 'store'])->middleware(CheckPermission::class . ':criar tarefas');
+            Route::put('update-task/{id}', [TaskController::class, 'updateCompleted'])->middleware(CheckPermission::class . ':editar tarefas');
 
             Route::get('info-company', [CompanyController::class]);
 
             Route::get('clients', [ClientController::class, 'index']);
             Route::get('clients/statistics', [ClientController::class, 'statistics']);
-            Route::post('client-register', [ClientController::class, 'store']);
+            Route::post('client-register', [ClientController::class, 'store'])->middleware(CheckPermission::class . ':criar clientes');
 
-            Route::middleware(CheckUserAndClientCompanyForClient::class)->group(function () {
+            Route::middleware(CheckUserAndClientCompany::class . ':client')->group(function () {
 
                 Route::get('client-profile/{id}', [ClientController::class, 'show']);
-                Route::delete('client-delete/{id}', [ClientController::class, 'destroy']);
-                Route::put('client-update/{id}', [ClientController::class, 'update']);
-                Route::put('client-address-update/{id}', [ClientAddressController::class, 'update']);
+                Route::delete('client-delete/{id}', [ClientController::class, 'destroy'])->middleware(CheckPermission::class . ':deletar clientes');
+                Route::put('client-update/{id}', [ClientController::class, 'update'])->middleware(CheckPermission::class . ':editar clientes');
+                Route::put('client-address-update/{id}', [ClientAddressController::class, 'update'])->middleware(CheckPermission::class . ':editar clientes');
 
             });
 
             Route::get('solicitations', [SolicitationController::class, 'index']);
-            Route::post('create-solicitation/{id}', [SolicitationController::class, 'store']);
+            Route::post('create-solicitation/{id}', [SolicitationController::class, 'store'])->middleware(CheckPermission::class . ':criar solicitações');
 
-            Route::middleware(CheckUserAndClientCompanyForSolicitation::class)->group(function () {
+            Route::middleware(CheckUserAndClientCompany::class . ':solicitation')->group(function () {
 
                 Route::put('counteroffer-solicitation/{id}', [SolicitationController::class, 'counteroffer']);
-                Route::delete('delete-solicitation/{id}', [SolicitationController::class, 'destroy']);
-                Route::put('approve-solicitation/{id}', [SolicitationController::class, 'approve']);
-                Route::put('recuse-solicitation/{id}', [SolicitationController::class, 'recuse']);
-                Route::put('cancel-solicitation/{id}', [SolicitationController::class, 'cancel']);
-                Route::put('update-solicitation/{id}', [SolicitationController::class, 'update']);
+                Route::delete('delete-solicitation/{id}', [SolicitationController::class, 'destroy'])->middleware(CheckPermission::class . ':deletar solicitações');
+                Route::put('approve-solicitation/{id}', [SolicitationController::class, 'approve'])->middleware(CheckPermission::class . ':aprovar solicitações');
+                Route::put('recuse-solicitation/{id}', [SolicitationController::class, 'recuse'])->middleware(CheckPermission::class . ':recusar solicitações');
+                Route::put('cancel-solicitation/{id}', [SolicitationController::class, 'cancel'])->middleware(CheckPermission::class . ':cancelar solicitações');
+                Route::put('update-solicitation/{id}', [SolicitationController::class, 'update'])->middleware(CheckPermission::class . ':editar solicitações');
 
             });
 
             Route::get('payments', [PaymentController::class, 'show']);
 
-            Route::post('create-payment/{id}', [PaymentController::class, 'store'])->middleware(CheckUserAndClientCompanyForCreatePayment::class);
+            Route::post('create-payment/{id}', [PaymentController::class, 'store'])->middleware(
+                [CheckUserAndClientCompany::class . ':liberation',
+                 CheckPermission::class . ':criar pagamentos'
+                ]);
 
             Route::middleware(CheckUserAndClientCompanyForPayment::class)->group(function () {
 

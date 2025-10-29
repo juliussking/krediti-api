@@ -11,6 +11,7 @@ use App\Http\Resources\ClientResource;
 use App\Http\Resources\ReferenceContactResource;
 use App\Http\Resources\RegisterClientResource;
 use App\Models\Client;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -26,7 +27,6 @@ class ClientController extends Controller
         $clients = QueryBuilder::for(Client::class)
             ->where('company_id', Auth::user()->company_id)
             ->allowedFilters(
-                AllowedFilter::exact('id'),
                 AllowedFilter::exact('person_type'),
                 AllowedFilter::exact('status'),
                 AllowedFilter::custom('search', new ClientGlobalSearchFilter()),
@@ -35,30 +35,114 @@ class ClientController extends Controller
             ->paginate(10)
             ->appends(request()->query());
 
-        $totalClients = Client::where('company_id', Auth()->user()->company_id)->get();
 
         return [
 
             'clients' => ClientResource::collection($clients),
-
-            'links' => $clients->toArray()['links'] ?? [],
-
+            
             'meta' => [
                 'current_page' => $clients->currentPage(),
                 'last_page' => $clients->lastPage(),
+                'links' => $clients->toArray()['links'] ?? [],
             ],
         ];
     }
 
     public function statistics()
     {
-        $client = Client::where('company_id', Auth()->user()->company_id)->get();
-        return [
+        $companyId = Auth()->user()->company_id;
 
-            'clients_count' => $client->count(),
-            'clients_active' => $client->where('status', 'Ativo')->count(),
-            'clients_due' => $client->where('status', 'Vencido')->count(),
-            'clients_paid_off' => $client->where('status', 'Quitado')->count(),
+        //TOTAL
+
+        $totalClients = Client::where('company_id', $companyId)->get();
+
+        $totalClientsThisMonth = Client::where('company_id', $companyId)
+            ->whereYear('created_at', Carbon::now()->year)
+            ->whereMonth('created_at', Carbon::now()->month)
+            ->count();
+
+            $totalNewClientsInThisMonth = $totalClients->count() - $totalClientsThisMonth;
+
+            //ACTIVE
+
+        $totalActiveClientsLastMonth = Client::where('company_id', $companyId)
+            ->whereYear('created_at', Carbon::now()->subMonth()->year)
+            ->whereMonth('created_at', Carbon::now()->subMonth()->month)
+            ->whereStatus('Ativo')
+            ->count();
+
+        $totalActiveClientsThisMonth = Client::where('company_id', $companyId)
+            ->whereYear('created_at', Carbon::now()->year)
+            ->whereMonth('created_at', Carbon::now()->month)
+            ->whereStatus('Ativo')
+            ->count();
+
+        $percentClientsActive = 0;
+
+        if ($totalActiveClientsLastMonth > 0) {
+            $percentClientsActive = (($totalActiveClientsThisMonth - $totalActiveClientsLastMonth) / $totalActiveClientsLastMonth) * 100;
+        }
+
+        //DUE
+
+        $totalDueClientsLastMonth = Client::where('company_id', $companyId)
+            ->whereYear('created_at', Carbon::now()->subMonth()->year)
+            ->whereMonth('created_at', Carbon::now()->subMonth()->month)
+            ->whereStatus('Vencido')
+            ->count();
+
+        $totalDueClientsThisMonth = Client::where('company_id', $companyId)
+            ->whereYear('created_at', Carbon::now()->year)
+            ->whereMonth('created_at', Carbon::now()->month)
+            ->whereStatus('Vencido')
+            ->count();  
+
+        $percentClientsDue = 0;
+        if ($totalDueClientsLastMonth > 0) {
+            $percentClientsDue = (($totalDueClientsThisMonth - $totalDueClientsLastMonth) / $totalDueClientsLastMonth) * 100;
+        }
+
+        //QUITADO
+
+        $totalPaidOffClientsLastMonth = Client::where('company_id', $companyId)
+            ->whereYear('created_at', Carbon::now()->subMonth()->year)
+            ->whereMonth('created_at', Carbon::now()->subMonth()->month)
+            ->whereStatus('Quitado')
+            ->count();
+
+        $totalPaidOffClientsThisMonth = Client::where('company_id', $companyId)
+            ->whereYear('created_at', Carbon::now()->year)
+            ->whereMonth('created_at', Carbon::now()->month)
+            ->whereStatus('Quitado')
+            ->count();
+
+        $percentClientsPaidOff = 0;
+        if ($totalPaidOffClientsLastMonth > 0) {
+            $percentClientsPaidOff = (($totalPaidOffClientsThisMonth - $totalPaidOffClientsLastMonth) / $totalPaidOffClientsLastMonth) * 100;
+        }
+
+
+        return [
+            'clients_count' => $totalClients->count(),
+            'clients_active' => $totalClients->where('status', 'Ativo')->count(),
+            'clients_due' => $totalClients->where('status', 'Vencido')->count(),
+            'clients_paid_off' => $totalClients->where('status', 'Quitado')->count(),
+            'clients_new_this_month' => $totalNewClientsInThisMonth,
+            'percent_client_active_this_month_vs_last_month' => round($percentClientsActive, 2),
+            'percent_client_due_this_month_vs_last_month' => round($percentClientsDue, 2),
+            'percent_client_paid_off_this_month_vs_last_month' => round($percentClientsPaidOff, 2),
+
+            'totalActiveClientsLastMonth' => $totalActiveClientsLastMonth,
+            'totalActiveClientsThisMonth' => $totalActiveClientsThisMonth,
+            'totalDueClientsLastMonth' => $totalDueClientsLastMonth,
+            'totalDueClientsThisMonth' => $totalDueClientsThisMonth,
+            'totalPaidOffClientsLastMonth' => $totalPaidOffClientsLastMonth,
+            'totalPaidOffClientsThisMonth' => $totalPaidOffClientsThisMonth
+
+
+
+
+
         ];
     }
     public function show($id)
