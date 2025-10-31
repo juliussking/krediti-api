@@ -65,6 +65,7 @@ class PaymentController extends Controller
             BeforePayment::dispatch($liberation);
 
             if (!$liberation) {
+                
                 throw new LiberationNotFoundException();
             }
 
